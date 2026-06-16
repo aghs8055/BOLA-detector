@@ -1,0 +1,53 @@
+# Target manifest Makefile — copy this into your target project and fill in the `# TODO` leaves.
+# Field reference + the manifest contract: docs/makefile-contract.md.
+# `start`/`stop`/`refresh` and the `get-*` leaves are yours; `describe` is provided — do not edit it.
+#
+# The default leaf values below describe a juice-shop-style bearer target and produce a valid
+# manifest as-is, so `make describe` works before you change anything.
+
+# --- lifecycle (implement these) -----------------------------------------
+start:
+	# TODO: boot the app + seed baseline (incl. regular & attacker users); block until healthy
+
+stop:
+	# TODO: stop the app + clean up (must be safe even if start half-failed)
+
+refresh:
+	# TODO: reset state to baseline (called once per detection run)
+
+# --- info leaves (each echoes exactly one line) --------------------------
+get-base-url:        ; @echo http://localhost:3000        # TODO
+get-spec:            ; @echo http://localhost:3000/api-docs/swagger.json  # TODO (URL or path)
+get-regular-vars:    ; @echo '{"email":"user@target.test","password":"regular-pass"}'      # TODO (one-line JSON)
+get-attacker-vars:   ; @echo '{"email":"attacker@target.test","password":"attacker-pass"}' # TODO (one-line JSON)
+get-login-method:    ; @echo POST                         # TODO: GET|POST|... or empty for no login
+get-login-path:      ; @echo /rest/user/login             # TODO: starts with / ; empty for no login
+get-login-headers:   ; @echo '{"Content-Type":"application/json"}'  # TODO: one-line JSON ; {} if none
+get-login-body:      ; @echo '{"email":"{{email}}","password":"{{password}}"}'  # TODO ; empty if none
+get-extract-from:    ; @echo body                         # TODO: body|cookie|header ; empty if none
+get-extract-path:    ; @echo authentication.token         # TODO: JSON path / cookie / header ; empty if none
+get-inject-into:     ; @echo header                       # TODO: header|cookie ; empty for no-auth
+get-inject-name:     ; @echo Authorization                # TODO ; empty for no-auth
+get-inject-value:    ; @echo 'Bearer {{credential}}'      # TODO ; empty for no-auth
+
+# --- aggregator (provided — do not edit) ---------------------------------
+# Each auth sub-object is emitted as null when its key field is empty, so "no login" / "no auth"
+# round-trip cleanly. headers / *-vars are parsed from one-line JSON with fromjson. The jq filter
+# is one line on purpose: a backslash-continued line inside jq's single-quoted program would pass
+# literal backslashes to jq. The --arg lines continue normally — they sit outside the quoted filter.
+describe:
+	@jq -n \
+	  --arg base_url        "$$(make -s get-base-url)" \
+	  --arg spec_value      "$$(make -s get-spec)" \
+	  --arg login_method    "$$(make -s get-login-method)" \
+	  --arg login_path      "$$(make -s get-login-path)" \
+	  --arg login_headers   "$$(make -s get-login-headers)" \
+	  --arg login_body      "$$(make -s get-login-body)" \
+	  --arg extract_from    "$$(make -s get-extract-from)" \
+	  --arg extract_path    "$$(make -s get-extract-path)" \
+	  --arg inject_into     "$$(make -s get-inject-into)" \
+	  --arg inject_name     "$$(make -s get-inject-name)" \
+	  --arg inject_value    "$$(make -s get-inject-value)" \
+	  --arg reg_vars        "$$(make -s get-regular-vars)" \
+	  --arg att_vars        "$$(make -s get-attacker-vars)" \
+	  '{version:1,base_url:$$base_url,spec:{kind:(if ($$spec_value|startswith("http")) then "url" else "file" end),value:$$spec_value},auth:{login:(if $$login_method=="" then null else {method:$$login_method,path:$$login_path,headers:($$login_headers|fromjson),body:$$login_body} end),extract:(if $$extract_from=="" then null else {from:$$extract_from,path:$$extract_path} end),inject:(if $$inject_into=="" then null else {into:$$inject_into,name:$$inject_name,value:$$inject_value} end)},users:{regular:{vars:($$reg_vars|fromjson)},attacker:{vars:($$att_vars|fromjson)}}}'

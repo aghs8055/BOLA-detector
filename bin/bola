@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# `bola` — entry point for the BOLA Detector CLI.
+#
+# Thin dispatcher: runs `python -m cli` from the repo root, preferring the project's virtualenv so
+# the right dependencies are on the path regardless of where it is invoked from. The whole command
+# tree (relations / run / report) lives in the `cli` package — run `bola --help` to explore it.
+#
+# Put this on your PATH (e.g. `ln -s "$PWD/bin/bola" ~/.local/bin/bola`) or call it as `bin/bola`.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Prefer a project virtualenv: the repo's own .venv, then a parent .venv (this rewrite lives in a
+# `new/` subdir of the wider project), then whatever `python` is on PATH.
+if [[ -x "$ROOT/.venv/bin/python" ]]; then
+  PY="$ROOT/.venv/bin/python"
+elif [[ -x "$ROOT/../.venv/bin/python" ]]; then
+  PY="$ROOT/../.venv/bin/python"
+else
+  PY="$(command -v python3 || command -v python)"
+fi
+
+cd "$ROOT"
+exec "$PY" -m cli "$@"

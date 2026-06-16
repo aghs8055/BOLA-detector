@@ -1,0 +1,13 @@
+.claude/settings.local.json
+
+# Secrets — never commit the filled-in env file (.env.example is the template)
+.env
+
+# Local artifacts
+*.db
+runs/
+__pycache__/
+.pytest_cache/
+
+# Branch-scoped working state — never merged to main (see CLAUDE.md)
+.dev/

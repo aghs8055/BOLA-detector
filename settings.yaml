@@ -1,0 +1,41 @@
+llm:
+  model: "anthropic/claude-sonnet-4-6"
+  analysis_model: ""  # falls back to model if empty
+  temperature: 0.0
+  max_retries: 2
+  timeout: 120
+
+test:
+  regular_ops: 50
+  hacker_ops: 50
+  strategy: "random"  # random | ai
+  ai_max_turns: 10
+  ai_require_full_coverage: true  # attacker must reach every relation-consuming op before finishing
+  attack_mode: "sweep"            # sweep (deterministic enumerate→build→sweep→creative) | freeform (old single-pass)
+  attack_ops_per_call: 4          # ops packed into one attack-fill LLM call (sweep mode)
+  attack_ids_per_op: 2            # victim ids replayed per op / followed per coordinate in the BFS enumerate
+  attack_max_attempts_per_op: 3   # drop a consumer op from the sweep after this many attacker attempts (loop guard)
+  revise_max: 2                   # on a 4xx input error (not 401/403/404), let the LLM revise + retry this many times
+  creative_turns: 5               # bounded free-form turns after the sweep (multi-step + mass-assignment)
+  request_timeout: 30
+  api_max_retries: 2
+
+relations:
+  group_size: 10        # target operations per LLM call
+  batch_size: 1         # source×group units sent concurrently per batch (1 = sequential)
+  max_attempts: 2       # detect + (max_attempts-1) revise passes
+  on_error: "stop"      # stop | continue
+
+analysis:
+  objects_per_call: 3   # objects packed into one analysis prompt (one verdict each)
+  batch_size: 5         # analysis prompts sent concurrently per batch (1 = sequential)
+  on_error: "stop"      # stop | continue
+
+storage:
+  db_path: "bola.db"
+  runs_dir: "runs"
+
+observability:
+  langfuse_enabled: true
+  langfuse_timeout: 20  # seconds for OTLP span export; generous so slow telemetry degrades to dropped traces, never an aborted run
+  log_level: "INFO"

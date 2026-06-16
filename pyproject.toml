@@ -1,0 +1,7 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--import-mode=importlib -m 'not llm'"
+markers = [
+    "llm: test makes real LLM calls (costs money; excluded by default, run with `-m llm`)",
+]
